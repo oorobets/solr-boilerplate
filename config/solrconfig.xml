@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!-- 
+    For more details about configurations options that may appear in
+    this file, see http://wiki.apache.org/solr/SolrConfigXml. 
+-->
+<config>
+    <!-- In all configuration below, a prefix of "solr." for class names
+         is an alias that causes solr to search appropriate packages,
+         including org.apache.solr.(search|update|request|core|analysis)
+         
+         You may also specify a fully qualified Java classname if you
+         have your own custom plugins.
+    -->
+
+    <!-- Default Properties -->
+    <abortOnConfigurationError>${solr.abortOnConfigurationError:true}</abortOnConfigurationError>
+
+    <!-- Controls what version of Lucene various components of Solr
+         adhere to.  Generally, you want to use the latest version to
+         get all bug fixes and improvements. It is highly recommended
+         that you fully re-index after changing this setting as it can
+         affect both how text is indexed and queried.
+    -->
+    <luceneMatchVersion>8.7.0</luceneMatchVersion>
+
+
+    <!-- The DirectoryFactory to use for indexes.
+         solr.StandardDirectoryFactory, the default, is filesystem-based and tries to pick the best implementation 
+         for the current JVM and platform.  One can force a particular implementation via solr.MMapDirectoryFactory, 
+         solr.NIOFSDirectoryFactory, solr.SimpleFSDirectoryFactory or solr.NRTCachingDirectoryFactory.
+         
+         solr.RAMDirectoryFactory is memory based, not persistent, and doesn't work with replication.
+         solr.NRTCachingDirectoryFactory is useful when using NRT search.
+    -->
+    <directoryFactory name="DirectoryFactory" class="${solr.directoryFactory:solr.NRTCachingDirectoryFactory}"/>
+
+    <schemaFactory class="ClassicIndexSchemaFactory"/>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         Index Config - These settings control low-level behavior of indexing
+         Most example settings here show the default value, but are commented
+         out, to more easily see where customizations have been made.
+         
+         Note: This replaces <indexDefaults> and <mainIndex> from older versions
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <indexConfig>
+
+        <!-- maxFieldLength specifies max number of *tokens* indexed per field. Default: 10000 -->
+        <!-- <maxFieldLength>10000</maxFieldLength>  -->
+
+        <!-- Maximum time to wait for a write lock (ms) for an IndexWriter. Default: 1000 -->
+        <!-- <writeLockTimeout>1000</writeLockTimeout>  -->
+
+        <!-- ramBufferSizeMB sets the amount of RAM that may be used by Lucene
+             indexing for buffering added documents and deletions before they are
+             flushed to the Directory.
+             
+             maxBufferedDocs sets a limit on the number of documents buffered
+             before flushing.
+             
+             If both ramBufferSizeMB and maxBufferedDocs is set, then
+             Lucene will flush based on whichever limit is hit first.
+        -->
+        <ramBufferSizeMB>2048</ramBufferSizeMB>
+        <!-- <maxBufferedDocs>1000</maxBufferedDocs> -->
+
+        <!-- Expert: Merge Policy 
+             The Merge Policy in Lucene controls how merging of segments is done.
+        -->
+        <mergePolicyFactory  class="org.apache.solr.index.TieredMergePolicyFactory">
+            <int name="maxMergeAtOnce">10</int>
+            <int name="segmentsPerTier">10</int>
+        </mergePolicyFactory >
+
+
+        <!-- LockFactory
+             This option specifies which Lucene LockFactory implementation
+             to use.
+             
+             single = SingleInstanceLockFactory - suggested for a
+                      read-only index or when there is no possibility of
+                      another process trying to modify the index.
+             native = NativeFSLockFactory - uses OS native file locking.
+                      Do not use when multiple solr webapps in the same
+                      JVM are attempting to share a single index.
+             simple = SimpleFSLockFactory  - uses a plain file for locking
+             
+             Defaults: 'native' is default for Solr3.6 and later, otherwise
+                       'simple' is the default
+             
+             More details on the nuances of each LockFactory...
+             http://wiki.apache.org/lucene-java/AvailableLockFactories
+        -->
+        <lockType>${solr.lock.type:native}</lockType>
+
+        <!-- Commit Deletion Policy
+             Custom deletion policies can be specified here. The class must
+             implement org.apache.lucene.index.IndexDeletionPolicy.
+             
+             http://lucene.apache.org/java/3_5_0/api/core/org/apache/lucene/index/IndexDeletionPolicy.html
+             
+             The default Solr IndexDeletionPolicy implementation supports
+             deleting index commit points on number of commits, age of
+             commit point and optimized status.
+             
+             The latest commit point should always be preserved regardless
+             of the criteria.
+        -->
+        <deletionPolicy class="solr.SolrDeletionPolicy">
+            <!-- The number of commit points to be kept -->
+            <str name="maxCommitsToKeep">1</str>
+
+            <!-- The number of optimized commit points to be kept -->
+            <str name="maxOptimizedCommitsToKeep">1</str>
+        </deletionPolicy>
+
+        <infoStream>true</infoStream>
+
+    </indexConfig>
+
+    <!-- JMX.  For more details see http://wiki.apache.org/solr/SolrJmx -->
+    <jmx />
+
+    <!-- Update Handler -->
+    <updateHandler class="solr.DirectUpdateHandler2">
+
+        <!-- AutoCommit
+
+         Perform a hard commit automatically under certain conditions.
+         Instead of enabling autoCommit, consider using "commitWithin"
+         when adding documents. 
+
+         http://wiki.apache.org/solr/UpdateXmlMessages
+
+         maxDocs -      Maximum number of documents to add since the last
+                        commit before automatically triggering a new commit.
+         maxTime -      Maximum amount of time in ms that is allowed to pass since a document 
+                        was added before automatically triggering a new commit. 
+         openSearcher - if false, the commit causes recent index changes
+                        to be flushed to stable storage, but does not cause a new
+                        searcher to be opened to make those changes visible.
+        -->
+        <autoCommit>
+            <maxTime>30000</maxTime>
+            <openSearcher>false</openSearcher>
+        </autoCommit>
+
+        <!-- softAutoCommit is like autoCommit except it causes a
+             'soft' commit which only ensures that changes are visible
+             but does not ensure that data is synced to disk.  This is
+             faster and more near-realtime friendly than a hard commit.
+        -->
+        <autoSoftCommit>
+            <maxTime>120000</maxTime>
+        </autoSoftCommit>
+
+
+        <!-- Enables a transaction log, currently used for real-time get and SolrCloud -->
+        <updateLog>
+            <str name="dir">${solr.data.dir:}</str>
+        </updateLog>
+
+    </updateHandler>
+
+
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         Query section - these settings control query time things like caches
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+    <query>
+
+        <!-- Solr Internal Query Caches
+
+             There are two implementations of cache available for Solr,
+             LRUCache, based on a synchronized LinkedHashMap, and
+             FastLRUCache, based on a ConcurrentHashMap.  
+             
+             FastLRUCache has faster gets and slower puts in single
+             threaded operation and thus is generally faster than LRUCache
+             when the hit ratio of the cache is high (> 75%), and may be
+             faster under other scenarios on multi-cpu systems.
+        -->
+
+        <!-- Filter Cache
+             Cache used by SolrIndexSearcher for filters (DocSets),
+             unordered sets of *all* documents that match a query.  When a
+             new searcher is opened, its caches may be prepopulated or
+             "autowarmed" using data from caches in the old searcher.
+             autowarmCount is the number of items to prepopulate.  For
+             LRUCache, the autowarmed items will be the most recently
+             accessed items.
+             
+             Parameters:
+                 class - the SolrCache implementation (LRUCache or FastLRUCache)
+                 size - the maximum number of entries in the cache
+                 initialSize - the initial number of entries in the cache. (see java.util.HashMap)
+                 autowarmCount - the number of entries to prepopulate from an old cache.  
+             
+             Getty Notes:
+                Setting autowarmCount to large-ish value (60% +) resulted in *signficant* autowarm times (nearly a minute)
+        -->
+        <filterCache
+            class="solr.CaffeineCache"
+            size="10000"
+            initialSize="500"
+            autowarmCount="10%"
+        />
+
+        <!-- Query Result Cache
+             Caches results of searches - ordered lists of document ids
+             (DocList) based on a query, a sort, and the range of documents requested.  
+        -->
+        <queryResultCache
+            class="solr.CaffeineCache"
+            size="10000"
+            initialSize="0"
+            autowarmCount="0"
+        />
+
+        <!-- Document Cache
+             Caches Lucene Document objects (the stored fields for each
+             document).  Since Lucene internal document ids are transient,
+             this cache will not be autowarmed.  
+        -->
+        <documentCache
+            class="solr.CaffeineCache"
+            size="250000"
+            initialSize="10000"
+            autowarmCount="0"
+        />
+
+        <!-- Field Value Cache
+             Cache used to hold field values that are quickly accessible
+             by document id.  The fieldValueCache is created by default
+             even if not configured here.
+        -->
+        <fieldValueCache
+                class="solr.CaffeineCache"
+                size="50"
+                autowarmCount="5%"
+        />
+
+        <!-- Lazy Field Loading
+             If true, stored fields that are not requested will be loaded
+             lazily.  This can result in a significant speed improvement
+             if the usual case is to not load all stored fields,
+             especially if the skipped fields are large compressed text
+             fields.
+        -->
+        <enableLazyFieldLoading>true</enableLazyFieldLoading>
+
+        <!-- Result Window Size
+             An optimization for use with the queryResultCache.  When a search
+             is requested, a superset of the requested number of document ids
+             are collected.  For example, if a search for a particular query
+             requests matching documents 10 through 19, and queryWindowSize is 50,
+             then documents 0 through 49 will be collected and cached.  Any further
+             requests in that range can be satisfied via the cache.  
+        -->
+        <queryResultWindowSize>300</queryResultWindowSize>
+
+        <!-- Maximum number of documents to cache for any entry in the queryResultCache. -->
+        <queryResultMaxDocsCached>300</queryResultMaxDocsCached>
+
+
+        <!-- Query Related Event Listeners
+
+             Various IndexSearcher related events can trigger Listeners to
+             take actions.
+             
+             newSearcher - fired whenever a new searcher is being prepared
+             and there is a current searcher handling requests (aka
+             registered).  It can be used to prime certain caches to
+             prevent long request times for certain requests.
+             
+             firstSearcher - fired whenever a new searcher is being
+             prepared but there is no current registered searcher to handle
+             requests or to gain autowarming data from.
+        -->
+
+        <!-- Use Cold Searcher
+             If a search request comes in and there is no current
+             registered searcher, then immediately register the still
+             warming searcher and use it.  If "false" then all requests
+             will block until the first searcher is done warming.
+        -->
+        <useColdSearcher>false</useColdSearcher>
+
+        <!-- Max Warming Searchers 
+             Maximum number of searchers that may be warming in the
+             background concurrently.  An error is returned if this limit
+             is exceeded.
+             
+             Recommend values of 1-2 for read-only slaves, higher for
+             masters w/o cache warming.
+        -->
+        <maxWarmingSearchers>2</maxWarmingSearchers>
+
+    </query>
+
+
+    <!-- Request Dispatcher
+
+         This section contains instructions for how the SolrDispatchFilter
+         should behave when processing requests for this SolrCore.
+         
+         handleSelect affects the behavior of requests such as /select?qt=XXX
+         
+         handleSelect="true" will cause the SolrDispatchFilter to process
+         the request and dispatch the query to a handler specified by the 
+         "qt" param
+         
+         handleSelect="false" will cause the SolrDispatchFilter to
+         ignore "/select" requests, resulting in a 404 unless a handler
+         is explicitly registered with the name "/select"
+    -->
+    <requestDispatcher handleSelect="true" >
+
+        <!-- Request Parsing
+
+             These settings indicate how Solr Requests may be parsed, and
+             what restrictions may be placed on the ContentStreams from
+             those requests
+
+             enableRemoteStreaming - enables use of the stream.file
+             and stream.url parameters for specifying remote streams.
+
+             multipartUploadLimitInKB - specifies the max size of
+             Multipart File Uploads that Solr will allow in a Request.
+         
+             *** WARNING ***
+             The settings below authorize Solr to fetch remote files, You
+             should make sure your system has some authentication before
+             using enableRemoteStreaming="true"
+        -->
+        <requestParsers enableRemoteStreaming="true" multipartUploadLimitInKB="2048000" enableStreamBody="true" />
+
+    </requestDispatcher>
+
+
+    <!-- Request Handlers 
+
+         http://wiki.apache.org/solr/SolrRequestHandler
+         
+         incoming queries will be dispatched to the correct handler
+         based on the path or the qt (query type) param.
+         
+         Names starting with a '/' are accessed with the a path equal to
+         the registered name.  Names without a leading '/' are accessed
+         with: http://host/app/[core/]select?qt=name
+         
+         If a /select request is processed with out a qt param
+         specified, the requestHandler that declares default="true" will
+         be used.
+         
+         If a Request Handler is declared with startup="lazy", then it will
+         not be initialized until the first request that uses it.
+    -->
+
+    <!-- SearchHandler
+         http://wiki.apache.org/solr/SearchHandler
+         
+         For processing Search Queries, the primary Request Handler
+         provided with Solr is "SearchHandler" It delegates to a sequent
+         of SearchComponents (see below) and supports distributed
+         queries across multiple shards
+    -->
+    <requestHandler name="search" class="solr.SearchHandler" default="true">
+        <lst name="defaults">
+            <str name="title">StandardRequestHandler</str>
+            <str name="defType">edismax</str>
+            <str name="echoParams">none</str>
+            <str name="fl">*,score</str>
+            <str name="df">default</str>
+            <str name="q.op">OR</str>
+            <str name="sow">true</str>
+            <str name="indent">false</str>            
+        </lst>
+		
+
+    </requestHandler>
+
+    <!-- Update Request Handler
+         http://wiki.apache.org/solr/UpdateXmlMessages
+         
+         The canonical Request Handler for Modifying the Index through
+         commands specified using XML, JSON, CSV, or JAVABIN
+         
+         Note: Since solr1.1 requestHandlers requires a valid content
+         type header if posted in the body. For example, curl now
+         requires: -H 'Content-type:text/xml; charset=utf-8'
+         
+         To override the request content type and force a specific 
+         Content-type, use the request parameter: 
+             ?update.contentType=text/csv
+         
+         This handler will pick a response format to match the input
+         if the 'wt' parameter is not explicit
+    -->
+
+    <requestHandler name="/update" class="solr.UpdateRequestHandler">
+        <!--
+        <lst name="defaults">
+            <str name="update.chain">dedupe</str>
+        </lst>
+        -->
+    </requestHandler>
+
+    <requestHandler name="/updateNode" class="solr.UpdateRequestHandler">
+        <lst name="defaults">
+            <str name="update.chain">nondistributed</str>
+        </lst>
+    </requestHandler>
+
+    <requestHandler name="/update/json" class="solr.JsonUpdateRequestHandler" startup="lazy" >
+    </requestHandler>
+
+	<!-- ping/healthcheck -->
+    <requestHandler name="/admin/ping" class="solr.PingRequestHandler">
+        <lst name="invariants">
+            <str name="q">*:*</str>
+        </lst>
+        <lst name="defaults">
+            <str name="echoParams">all</str>
+            <int name="rows">0</int>
+            <str name="shards.tolerant">requireZkConnected</str>
+            <str name="distrib">false</str>
+        </lst>
+        <!-- An optional feature of the pingRequestHandler is to configure the 
+             handler with a "healthcheckFile" which can be used to enable/disable 
+             the PingRequestHandler.
+             relative paths are resolved against the data dir 
+        -->
+        <str name="healthcheckFile">server-enabled.txt</str>
+    </requestHandler>
+
+    <!-- Solr Replication for SolrCloud Recovery
+         This is the config needed for SolrCloud's recovery replication.
+    -->
+    <requestHandler name="/replication" class="solr.ReplicationHandler" startup="lazy" >
+        <str name="maxNumberOfBackups">1</str>
+    </requestHandler>
+
+    <!-- Realtime get handler, guaranteed to return the latest stored fields of
+         any document, without the need to commit or open a new searcher.  The
+         current implementation relies on the updateLog feature being enabled. 
+    -->
+    <requestHandler name="/get" class="solr.RealTimeGetHandler">
+        <lst name="defaults">
+            <str name="omitHeader">false</str>
+        </lst>
+    </requestHandler>
+
+    <!-- Field & Document Analysis Request Handlers
+    -->
+    <requestHandler name="/analysis/field" class="solr.FieldAnalysisRequestHandler" startup="lazy" />
+    <requestHandler name="/analysis/document" class="solr.DocumentAnalysisRequestHandler" startup="lazy" />
+
+    <!-- Processor chain used to eliminate duplicates -->
+    <!-- Dedupe disabled until https://issues.apache.org/jira/browse/SOLR-3473 is resolved. -->
+    <!--
+    <updateRequestProcessorChain name="dedupe">
+        <processor class="solr.processor.SignatureUpdateProcessorFactory">
+            <bool name="enabled">false</bool>
+            <str name="signatureField">sig</str>
+            <bool name="overwriteDupes">true</bool>
+            <str name="fields">id</str>
+            <str name="signatureClass">solr.processor.Lookup3Signature</str>
+        </processor>
+        <processor class="solr.LogUpdateProcessorFactory" />
+        <processor class="solr.RunUpdateProcessorFactory" />
+    </updateRequestProcessorChain>
+    -->
+
+    <!-- Processor chain for node-specific requests (no distribution to other shards) -->
+    <updateRequestProcessorChain name="nondistributed">
+        <processor class="solr.NoOpDistributingUpdateProcessorFactory" />
+        <processor class="solr.LogUpdateProcessorFactory" />
+        <processor class="solr.RunUpdateProcessorFactory" />
+    </updateRequestProcessorChain>
+
+    <!-- Admin interface -->
+    <admin>
+        <defaultQuery>*:*</defaultQuery>
+    </admin>
+    
+    <queryParser name="payload" class="com.getty.search.PayloadTermQParserPlugin" />
+
+    <valueSourceParser name="fpay" class="org.apache.solr.search.FloatPayloadValueSourceParser" />
+    <valueSourceParser name="fsb" class="org.apache.solr.search.FieldSingleBoostValueSourceParser" />
+	
+</config>
