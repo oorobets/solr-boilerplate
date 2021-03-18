@@ -23,7 +23,7 @@
     <field name="name" type="string" indexed="true" stored="true" multiValued="false" docValues="false" />
 
     <field name="age" type="int" indexed="true" stored="true" multiValued="false" docValues="true" />
-]    
+   
   </fields>
 
   <uniqueKey>id</uniqueKey>
