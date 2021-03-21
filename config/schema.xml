@@ -23,6 +23,8 @@
     <field name="name" type="string" indexed="true" stored="true" multiValued="false" docValues="false" />
 
     <field name="age" type="int" indexed="true" stored="true" multiValued="false" docValues="true" />
+    
+    <field name="_version_" type="long" indexed="false" stored="false"/>
    
   </fields>
 
