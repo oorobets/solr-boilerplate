@@ -78,7 +78,7 @@
              If both ramBufferSizeMB and maxBufferedDocs is set, then
              Lucene will flush based on whichever limit is hit first.
         -->
-        <ramBufferSizeMB>2048</ramBufferSizeMB>
+        <ramBufferSizeMB>256</ramBufferSizeMB>
         <!-- <maxBufferedDocs>1000</maxBufferedDocs> -->
 
         <!-- Expert: Merge Policy 
@@ -214,49 +214,47 @@
                  initialSize - the initial number of entries in the cache. (see java.util.HashMap)
                  autowarmCount - the number of entries to prepopulate from an old cache.  
              
-             Getty Notes:
-                Setting autowarmCount to large-ish value (60% +) resulted in *signficant* autowarm times (nearly a minute)
         -->
-        <filterCache
+        <!-- <filterCache
             class="solr.CaffeineCache"
             size="10000"
             initialSize="500"
             autowarmCount="10%"
-        />
+        /> -->
 
         <!-- Query Result Cache
              Caches results of searches - ordered lists of document ids
              (DocList) based on a query, a sort, and the range of documents requested.  
         -->
-        <queryResultCache
+        <!-- <queryResultCache
             class="solr.CaffeineCache"
             size="10000"
             initialSize="0"
             autowarmCount="0"
-        />
+        /> -->
 
         <!-- Document Cache
              Caches Lucene Document objects (the stored fields for each
              document).  Since Lucene internal document ids are transient,
              this cache will not be autowarmed.  
         -->
-        <documentCache
+        <!-- <documentCache
             class="solr.CaffeineCache"
             size="250000"
             initialSize="10000"
             autowarmCount="0"
-        />
+        /> -->
 
         <!-- Field Value Cache
              Cache used to hold field values that are quickly accessible
              by document id.  The fieldValueCache is created by default
              even if not configured here.
         -->
-        <fieldValueCache
+        <!-- <fieldValueCache
                 class="solr.CaffeineCache"
                 size="50"
                 autowarmCount="5%"
-        />
+        /> -->
 
         <!-- Lazy Field Loading
              If true, stored fields that are not requested will be loaded
@@ -392,7 +390,7 @@
             <str name="df">default</str>
             <str name="q.op">OR</str>
             <str name="sow">true</str>
-            <str name="indent">false</str>            
+            <str name="indent">true</str>            
         </lst>
 		
 
@@ -501,10 +499,4 @@
     <admin>
         <defaultQuery>*:*</defaultQuery>
     </admin>
-    
-    <queryParser name="payload" class="com.getty.search.PayloadTermQParserPlugin" />
-
-    <valueSourceParser name="fpay" class="org.apache.solr.search.FloatPayloadValueSourceParser" />
-    <valueSourceParser name="fsb" class="org.apache.solr.search.FieldSingleBoostValueSourceParser" />
-	
 </config>
