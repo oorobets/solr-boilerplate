@@ -1,14 +1,20 @@
 <?xml version="1.0" ?>
 
 <schema name="Boilerplate" version="0.987">
+
+  <types>
+    <fieldType name="string" class="solr.StrField"/>
+    <fieldType name="int" class="solr.IntPointField"/>
+    <fieldType name="long" class="solr.LongPointField"/>
+  </types>
   <fields>
-    <field name="id" type="string" indexed="true" stored="true" multiValued="false" required="true" docValues="true" />
+    <field name="id" type="string" indexed="true" stored="true" multiValued="false" required="true" docValues="false" />
 
     <field name="name" type="string" indexed="true" stored="true" multiValued="false" docValues="false" />
 
-    <field name="age" type="int" indexed="true" stored="true" multiValued="false" docValues="true" />
+    <field name="age" type="int" indexed="true" stored="true" multiValued="false" docValues="false" />
     
-    <field name="_version_" type="long" indexed="false" stored="false"/>
+    <field name="_version_" type="long" indexed="true" stored="true" multiValued="false"/>
    
   </fields>
 
